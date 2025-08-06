@@ -15,8 +15,8 @@ class ConversionRequest(BaseModel):
     timeout: int = Field(default=600, ge=30, le=1800, description="超时时间（秒），范围30-1800")
     size: Optional[int] = Field(default=None, ge=100, le=4000, description="输出图片大小（保持宽高比）")
     jpegopt: Optional[dict] = Field(default=None, description="JPEG压缩选项")
-    storage_type: Literal["base64", "file", "both"] = Field(default="base64", description="存储类型：base64编码、文件存储或两者都有")
-    image_mode: Literal["base64", "path"] = Field(default="base64", description="返回图片模式：base64编码或文件路径")
+    storage_type: Literal["base64", "file", "both"] = Field(default="file", description="存储类型：base64编码、文件存储或两者都有")
+    image_mode: Literal["base64", "path"] = Field(default="path", description="返回图片模式：base64编码或文件路径")
     
     class Config:
         schema_extra = {
@@ -31,8 +31,8 @@ class ConversionRequest(BaseModel):
                 "use_pdftocairo": False,
                 "timeout": 600,
                 "size": 800,
-                "storage_type": "base64",
-                "image_mode": "base64"
+                "storage_type": "file",
+                "image_mode": "path"
             }
         }
 

@@ -102,8 +102,8 @@ async def convert_pdf_to_images(
     use_pdftocairo: bool = False,
     timeout: int = 600,
     size: int = None,
-    storage_type: str = "base64",
-    image_mode: str = "base64"
+    storage_type: str = "file",
+    image_mode: str = "path"
 ):
     """
     转换PDF文件为图片格式
@@ -127,7 +127,9 @@ async def convert_pdf_to_images(
     
     try:
         # 读取文件内容
+        logger.info(f"开始读取PDF文件: {file.filename}")
         pdf_data = await file.read()
+        logger.info(f"PDF文件读取完成，大小: {len(pdf_data)} bytes")
         
         # 构建转换请求
         request = ConversionRequest(
@@ -147,10 +149,15 @@ async def convert_pdf_to_images(
         
         # 执行转换
         filename_prefix = os.path.splitext(file.filename)[0] if file.filename else "pdf"
+        logger.info(f"开始转换PDF，参数: dpi={request.dpi}, 格式={request.fmt}, 页面范围={request.first_page}-{request.last_page}")
         base64_images, file_urls = PDFConverterService.convert_pdf_to_images(pdf_data, request, filename_prefix)
+        logger.info(f"PDF转换完成")
         
         # 计算页面数
         pages_count = len(base64_images) if base64_images else len(file_urls) if file_urls else 0
+        
+        elapsed_time = time.time() - start_time
+        logger.info(f"PDF转换成功完成，耗时: {elapsed_time:.2f}秒，页面数: {pages_count}")
         
         return ConversionResponse(
             success=True,

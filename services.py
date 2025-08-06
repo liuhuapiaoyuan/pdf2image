@@ -3,6 +3,7 @@ import io
 import os
 import uuid
 import httpx
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
@@ -25,6 +26,8 @@ from exceptions import (
 )
 from models import ConversionRequest
 
+# 获取日志器
+logger = logging.getLogger(__name__)
 
 class PDFConverterService:
     """PDF转换服务类"""
@@ -114,7 +117,9 @@ class PDFConverterService:
             Tuple[Optional[List[str]], Optional[List[str]]]: (Base64列表, 文件URL列表)
         """
         try:
+            logger.info(f"开始PDF转换流程，文件大小: {len(pdf_data)} bytes")
             PDFConverterService.validate_pdf_file(pdf_data)
+            logger.info("PDF文件验证通过")
             
             # 构建转换参数
             convert_params = {
@@ -144,7 +149,9 @@ class PDFConverterService:
                 convert_params['jpegopt'] = request.jpegopt
             
             # 执行转换
+            logger.info(f"开始执行PDF转换")
             images = convert_from_bytes(**convert_params)
+            logger.info(f"PDF转换完成，生成 {len(images)} 张图片")
             
             base64_images = None
             file_urls = None
@@ -152,6 +159,7 @@ class PDFConverterService:
             # 根据存储类型处理结果
             storage_type = getattr(request, 'storage_type', config.OUTPUT_STORAGE_TYPE)
             image_mode = getattr(request, 'image_mode', 'base64')
+            logger.info(f"处理转换结果，存储类型: {storage_type}, 返回模式: {image_mode}")
             
             if storage_type in ['base64', 'both']:
                 base64_images = []
@@ -206,14 +214,19 @@ class PDFConverterService:
             return base64_images, file_urls
             
         except PDFInfoNotInstalledError:
+            logger.error("Poppler工具未正确安装")
             raise PopplerNotInstalledException("Poppler工具未正确安装，请安装poppler-utils")
         except PDFPageCountError as e:
+            logger.error(f"PDF页面计数错误: {str(e)}")
             raise PDFCorruptedException(f"PDF页面计数错误: {str(e)}")
         except PDFSyntaxError as e:
+            logger.error(f"PDF语法错误: {str(e)}")
             raise PDFCorruptedException(f"PDF语法错误: {str(e)}")
         except PDFPopplerTimeoutError:
+            logger.error("PDF转换超时")
             raise ConversionFailedException("PDF转换超时，请尝试减少页面数量或增加超时时间")
         except Exception as e:
+            logger.error(f"PDF转换失败: {str(e)}", exc_info=True)
             raise ConversionFailedException(f"PDF转换失败: {str(e)}")
     
     @staticmethod
@@ -230,8 +243,13 @@ class PDFConverterService:
         try:
             PDFConverterService.validate_pdf_file(pdf_data)
             
-            # 获取PDF信息
-            info = pdfinfo_from_bytes(pdf_data, strict=True)
+            # 获取PDF信息 (移除strict参数，因为某些版本不支持)
+            try:
+                info = pdfinfo_from_bytes(pdf_data, strict=True)
+            except TypeError:
+                # 如果strict参数不支持，则使用不带strict参数的版本
+                logger.warning("pdfinfo_from_bytes不支持strict参数，使用默认参数")
+                info = pdfinfo_from_bytes(pdf_data)
             
             # 处理返回数据
             result = {
