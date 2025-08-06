@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  pdf2image-api:
+    image: docker.cnb.cool/qzsyzn/docker/pdf2image
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./output:/app/output
+      - ./logs:/app/logs
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - DEBUG=false
+      - OUTPUT_STORAGE_TYPE=both
+      - OUTPUT_DIR=/app/output
+      - OUTPUT_BASE_URL=http://localhost:8000/files
+      - MAX_FILE_SIZE=52428800  # 50MB
+      - DEFAULT_DPI=200
+      - DEFAULT_FORMAT=png
+      - MAX_THREAD_COUNT=8
+      - DEFAULT_TIMEOUT=600
+      - CORS_ORIGINS=*
+      - ENABLE_CACHE=false
+      - CACHE_TTL=3600
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s 
